@@ -39,6 +39,7 @@
 
 #include <netinet/tcp.h>
 #include <linux/inet_diag.h>
+#include "ss.h"
 
 int resolve_hosts = 0;
 int resolve_services = 1;
@@ -62,6 +63,11 @@ static const char *TCP_PROTO = "tcp";
 static const char *UDP_PROTO = "udp";
 static const char *RAW_PROTO = "raw";
 static const char *dg_proto = NULL;
+
+
+struct tcp_info* ret_tcp_info;
+int port_num;
+int error_tcp_info;
 
 enum
 {
@@ -1324,7 +1330,7 @@ static char *sprint_bw(char *buf, double bw)
 	return buf;
 }
 
-static void tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
+static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
 {
 	struct rtattr * tb[INET_DIAG_MAX+1];
 	char b1[64];
@@ -1371,7 +1377,7 @@ static void tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
 			printf(" wscale:%d,%d", info->tcpi_snd_wscale,
 			       info->tcpi_rcv_wscale);
 		if (info->tcpi_rto && info->tcpi_rto != 3000000)
-			printf(" rto:%g", (double)info->tcpi_rto/1000);
+			printf(" rtotcp_show_info:%g", (double)info->tcpi_rto/1000);
 		if (info->tcpi_rtt)
 			printf(" rtt:%g/%g", (double)info->tcpi_rtt/1000,
 			       (double)info->tcpi_rttvar/1000);
@@ -1404,7 +1410,9 @@ static void tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
 		if (info->tcpi_rcv_space)
 			printf(" rcv_space:%d", info->tcpi_rcv_space);
 
+		return info;
 	}
+	return 0;
 }
 
 static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
@@ -1463,7 +1471,11 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 	}
 	if (show_mem || show_tcpinfo) {
 		printf("\n\t");
-		tcp_show_info(nlh, r);
+		if ((port_num == s.lport) | (port_num == s.rport)) {
+			ret_tcp_info = tcp_show_info(nlh, r);
+		} else {
+			tcp_show_info(nlh, r);
+		}
 	}
 
 	printf("\n");
@@ -2527,7 +2539,7 @@ static const struct option long_opts[] = {
 
 };
 
-int main(int argc, char *argv[])
+int main1(int argc, char *argv[])
 {
 	int do_default = 1;
 	int saw_states = 0;
@@ -2767,7 +2779,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ss: no families to show with such filter.\n");
 		exit(0);
 	}
-
+// disable by -n
 	if (resolve_services && resolve_hosts &&
 	    (current_filter.dbs&(UNIX_DBM|(1<<TCP_DB)|(1<<UDP_DB)|(1<<DCCP_DB))))
 		init_service_resolver();
@@ -2892,4 +2904,65 @@ int main(int argc, char *argv[])
 	if (current_filter.dbs & (1<<DCCP_DB))
 		tcp_show(&current_filter, DCCPDIAG_GETSOCK);
 	return 0;
+}
+/**
+ * Get struct tcp_info by port num
+ */
+struct tcp_info* get_tcp_info(int port) {
+	int argc = 2;
+	char *argv[] = { "ss", "-i" };
+	port_num = port;
+	main1(argc, argv);
+	return ret_tcp_info;
+}
+
+/**
+ * Fake main function
+ */
+int main(int argc, char *argv[]) {
+	show_tcp_info_struct(get_tcp_info(atoi(argv[1])));
+	return 0;
+
+}
+
+void show_tcp_info_struct(struct tcp_info* info) {
+    char b1[64];
+    printf("\n");
+    if (info == 0) {
+        printf("data not found \n");
+        return 0;
+    }
+    if (show_options) {
+        if (info->tcpi_options & TCPI_OPT_TIMESTAMPS)
+            printf(" ts");
+        if (info->tcpi_options & TCPI_OPT_SACK)
+            printf(" sack");
+        if (info->tcpi_options & TCPI_OPT_ECN)
+            printf(" ecn");
+    }
+
+    if (info->tcpi_options & TCPI_OPT_WSCALE)
+        printf(" wscale:%d,%d", info->tcpi_snd_wscale, info->tcpi_rcv_wscale);
+    if (info->tcpi_rto && info->tcpi_rto != 3000000)
+        printf(" rto:%g", (double) info->tcpi_rto / 1000);
+    if (info->tcpi_rtt)
+        printf(" rtt:%g/%g", (double) info->tcpi_rtt / 1000, (double) info->tcpi_rttvar / 1000);
+    if (info->tcpi_ato)
+        printf(" ato:%g", (double) info->tcpi_ato / 1000);
+    if (info->tcpi_snd_cwnd != 2)
+        printf(" cwnd:%d", info->tcpi_snd_cwnd);
+    if (info->tcpi_snd_ssthresh < 0xFFFF)
+        printf(" ssthresh:%d", info->tcpi_snd_ssthresh);
+
+    double rtt = (double) info->tcpi_rtt;
+
+    if (rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
+        printf(" send %sbps", sprint_bw(b1, (double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 8000000. / rtt));
+    }
+
+    if (info->tcpi_rcv_rtt)
+        printf(" rcv_rtt:%g", (double) info->tcpi_rcv_rtt / 1000);
+    if (info->tcpi_rcv_space)
+        printf(" rcv_space:%d", info->tcpi_rcv_space);
+    printf("\n");
 }
