@@ -2,7 +2,7 @@
  * ss.h
  *
  *  Created on: 27.07.2012
- *      Author: andrey
+ *      Author: Andrey Kuznetsov
  */
 
 #ifndef SS_H_

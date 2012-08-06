@@ -6,7 +6,8 @@
  *		as published by the Free Software Foundation; either version
  *		2 of the License, or (at your option) any later version.
  *
- * Authors:	Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>
+ * Authors:	Alexey Kuznetsov, <kuznet@ms2.inr.ac.ru>,
+ * Andrey Kuznetsov <andreykyz@gmail.com>
  */
 
 #include <stdio.h>
@@ -66,7 +67,8 @@ static const char *dg_proto = NULL;
 
 
 struct tcp_info* ret_tcp_info;
-int port_num;
+int lport_num;
+int rport_num;
 int error_tcp_info;
 
 enum
@@ -1471,7 +1473,7 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 	}
 	if (show_mem || show_tcpinfo) {
 		printf("\n\t");
-		if ((port_num == s.lport) | (port_num == s.rport)) {
+		if ((lport_num == s.lport) | (rport_num == s.rport)) {
 			ret_tcp_info = tcp_show_info(nlh, r);
 		} else {
 			tcp_show_info(nlh, r);
@@ -2908,10 +2910,11 @@ int main1(int argc, char *argv[])
 /**
  * Get struct tcp_info by port num
  */
-struct tcp_info* get_tcp_info(int port) {
+struct tcp_info* get_tcp_info(int lport, int rport) {
 	int argc = 2;
 	char *argv[] = { "ss", "-i" };
-	port_num = port;
+	lport_num = lport;
+	rport_num = rport;
 	main1(argc, argv);
 	return ret_tcp_info;
 }
@@ -2920,7 +2923,7 @@ struct tcp_info* get_tcp_info(int port) {
  * Fake main function
  */
 int main(int argc, char *argv[]) {
-	show_tcp_info_struct(get_tcp_info(atoi(argv[1])));
+	show_tcp_info_struct(get_tcp_info(atoi(argv[1]), -1));
 	return 0;
 
 }
