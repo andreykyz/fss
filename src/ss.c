@@ -2926,7 +2926,7 @@ struct channel_info* get_format_tcp_info(int lport, int rport) {
 /**
  * Fake main function
  */
-int main(int argc, char *argv[]) {
+int main_fake(int argc, char *argv[]) {
 	show_tcp_info_struct(get_tcp_info(atoi(argv[1]), -1));
 	return 0;
 

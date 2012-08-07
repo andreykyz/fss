@@ -1,11 +1,15 @@
 SSOBJ=ss.o ssfilter.o
+FSSOBJ=ss.o ssfilter.o
 LNSTATOBJ=lnstat.o lnstat_util.o
 
-TARGETS=ss
+TARGETS=libss
 
 include ../Config
 
 all: $(TARGETS)
+
+libss:  $(SSOBJ)
+	ar -cvq libfss.a $(FSSOBJ) 
 
 ss: $(SSOBJ) $(LIBUTIL)
 
