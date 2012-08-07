@@ -2919,6 +2919,10 @@ struct tcp_info* get_tcp_info(int lport, int rport) {
 	return ret_tcp_info;
 }
 
+struct channel_info* get_format_tcp_info(int lport, int rport) {
+    return format_info(get_tcp_info(lport, rport));
+}
+
 /**
  * Fake main function
  */
@@ -2933,7 +2937,7 @@ void show_tcp_info_struct(struct tcp_info* info) {
     printf("\n");
     if (info == 0) {
         printf("data not found \n");
-        return 0;
+        return;
     }
     if (show_options) {
         if (info->tcpi_options & TCPI_OPT_TIMESTAMPS)
@@ -2968,4 +2972,35 @@ void show_tcp_info_struct(struct tcp_info* info) {
     if (info->tcpi_rcv_space)
         printf(" rcv_space:%d", info->tcpi_rcv_space);
     printf("\n");
+}
+
+struct channel_info* format_info(struct tcp_info* info) {
+    channel_info_st.snd_wscale = info->tcpi_snd_wscale;
+    channel_info_st.rcv_wscale = info->tcpi_rcv_wscale;
+    if (info->tcpi_rto && info->tcpi_rto != 3000000) {
+        channel_info_st.rto = (double) info->tcpi_rto / 1000;
+    } else {
+        channel_info_st.rto = 0;
+    }
+    channel_info_st.rtt = (double) info->tcpi_rtt / 1000;
+    channel_info_st.rtt_var = (double) info->tcpi_rttvar / 1000;
+    channel_info_st.ato = (double) info->tcpi_ato / 1000;
+    if (info->tcpi_snd_cwnd != 2) { // really need?
+        channel_info_st.cwnd = info->tcpi_snd_cwnd;
+    } else {
+        channel_info_st.cwnd = 0;
+    }
+    if (info->tcpi_snd_ssthresh < 0xFFFF) {
+        channel_info_st.ssthresh = info->tcpi_snd_ssthresh;
+    } else {
+        channel_info_st.ssthresh = 0;
+    }
+    if (channel_info_st.rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
+        channel_info_st.send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_st.rtt);
+    } else {
+        channel_info_st.send = 0;
+    }
+    channel_info_st.rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
+    channel_info_st.rcv_space = info->tcpi_rcv_space;
+    return &channel_info_st;
 }
