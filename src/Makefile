@@ -1,6 +1,7 @@
 SSOBJ=ss.o ssfilter.o
 FSSOBJ=ss.o ssfilter.o
 LNSTATOBJ=lnstat.o lnstat_util.o
+#YACCFLAGS=-d -t -v --name-prefix=_fss
 
 TARGETS=libss
 

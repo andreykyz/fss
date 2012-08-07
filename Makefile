@@ -32,6 +32,7 @@ CC = gcc
 HOSTCC = gcc
 CCOPTS = -D_GNU_SOURCE -O3 -Wstrict-prototypes -Wall
 CFLAGS = $(CCOPTS) -I../include -I/usr/include -I. $(DEFINES)
+YACC = bison -y $(YACCFLAGS)
 YACCFLAGS = -d -t -v --name-prefix=_fss
 
 LDLIBS += -L../lib -lnetlink -lutil -lrt -L/usr/local/lib/
