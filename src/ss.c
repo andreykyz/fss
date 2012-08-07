@@ -2554,7 +2554,7 @@ int main1(int argc, char *argv[])
 	memset(&current_filter, 0, sizeof(current_filter));
 
   current_filter.states = default_filter.states;
-
+    goto evil_hack;
 	while ((ch = getopt_long(argc, argv, "gdhaletuwxnro460spf:miA:D:F:vV",
 				 long_opts, NULL)) != EOF) {
 		switch(ch) {
@@ -2723,6 +2723,7 @@ int main1(int argc, char *argv[])
 			usage();
 		}
 	}
+    evil_hack: show_tcpinfo = 1;
 
 	argc -= optind;
 	argv += optind;
