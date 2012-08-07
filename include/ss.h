@@ -28,5 +28,6 @@ struct channel_info channel_info_st;
 struct channel_info* format_info(struct tcp_info * info);
 struct tcp_info* get_tcp_info(int lport, int rport);
 struct channel_info* get_format_tcp_info(int lport, int rport);
+void show_tcp_info_struct(struct tcp_info* info);
 
 #endif /* SS_H_ */
