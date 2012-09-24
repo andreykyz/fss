@@ -1475,6 +1475,8 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 		printf("\n\t");
 		if ((lport_num == s.lport) | (rport_num == s.rport)) {
 			ret_tcp_info = tcp_show_info(nlh, r);
+			s_r_queue_st.recv_q = r->idiag_rqueue;
+			s_r_queue_st.send_q = r->idiag_wqueue;
 		} else {
 			tcp_show_info(nlh, r);
 		}
@@ -2917,6 +2919,8 @@ struct tcp_info* get_tcp_info(int lport, int rport) {
 	lport_num = lport;
 	rport_num = rport;
 	ret_tcp_info = 0;
+	s_r_queue_st.recv_q = 0;
+	s_r_queue_st.send_q = 0;
 	main1(argc, argv);
 	return ret_tcp_info;
 }
@@ -3000,5 +3004,7 @@ struct channel_info* format_info(struct tcp_info* info) {
     }
     channel_info_st.rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
     channel_info_st.rcv_space = info->tcpi_rcv_space;
+    channel_info_st.recv_q = s_r_queue_st.recv_q;
+    channel_info_st.send_q = s_r_queue_st.send_q;
     return &channel_info_st;
 }

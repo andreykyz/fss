@@ -22,7 +22,14 @@ struct channel_info {
     uint32_t send; // in kbyte/sec)
     double rcv_rtt;
     uint32_t rcv_space;
+    uint32_t send_q;
+    uint32_t recv_q;
 };
+struct s_r_queue {
+    uint32_t send_q;
+    uint32_t recv_q;
+};
+struct s_r_queue s_r_queue_st;
 struct channel_info channel_info_st;
 
 struct channel_info* format_info(struct tcp_info * info);
