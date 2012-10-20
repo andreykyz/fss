@@ -14,8 +14,8 @@ struct channel_info {
     uint8_t snd_wscale;
     uint8_t rcv_wscale;
     double rto;
-    double rtt; // in ms
-    double rtt_var; // in ms
+    double rtt; // in ms (round trip time)
+    double rtt_var; // in ms (jitter)
     double ato;
     uint32_t cwnd; // in mss
     uint32_t ssthresh;
@@ -30,7 +30,7 @@ struct s_r_queue {
     uint32_t recv_q;
 };
 struct s_r_queue s_r_queue_st;
-struct channel_info channel_info_st;
+extern volatile struct channel_info channel_info_st;
 
 struct channel_info* format_info(struct tcp_info * info);
 struct tcp_info* get_tcp_info(int lport, int rport);
