@@ -67,6 +67,7 @@ static const char *dg_proto = NULL;
 
 
 struct tcp_info* ret_tcp_info;
+struct channel_info* channel_info_st;
 int lport_num;
 int rport_num;
 int error_tcp_info;
@@ -2925,7 +2926,8 @@ struct tcp_info* get_tcp_info(int lport, int rport) {
 	return ret_tcp_info;
 }
 
-struct channel_info* get_format_tcp_info(int lport, int rport) {
+struct channel_info* get_format_tcp_info(int lport, int rport, struct channel_info* channel_info_st_link) {
+    channel_info_st = channel_info_st_link;
     return format_info(get_tcp_info(lport, rport));
 }
 
@@ -2981,30 +2983,30 @@ void show_tcp_info_struct(struct tcp_info* info) {
 }
 
 struct channel_info* format_info(struct tcp_info* info) {
-    memset(&channel_info_st, 0, sizeof(channel_info_st));
+    memset(channel_info_st, 0, sizeof(channel_info_st));
     if (info == 0) {
-        return &channel_info_st;
+        return channel_info_st;
     }
-    channel_info_st.snd_wscale = info->tcpi_snd_wscale;
-    channel_info_st.rcv_wscale = info->tcpi_rcv_wscale;
+    channel_info_st->snd_wscale = info->tcpi_snd_wscale;
+    channel_info_st->rcv_wscale = info->tcpi_rcv_wscale;
     if (info->tcpi_rto && info->tcpi_rto != 3000000) {
-        channel_info_st.rto = (double) info->tcpi_rto / 1000;
+        channel_info_st->rto = (double) info->tcpi_rto / 1000;
     }
-    channel_info_st.rtt = (double) info->tcpi_rtt / 1000;
-    channel_info_st.rtt_var = (double) info->tcpi_rttvar / 1000;
-    channel_info_st.ato = (double) info->tcpi_ato / 1000;
+    channel_info_st->rtt = (double) info->tcpi_rtt / 1000;
+    channel_info_st->rtt_var = (double) info->tcpi_rttvar / 1000;
+    channel_info_st->ato = (double) info->tcpi_ato / 1000;
     if (info->tcpi_snd_cwnd != 2) { // really need?
-        channel_info_st.cwnd = info->tcpi_snd_cwnd;
+        channel_info_st->cwnd = info->tcpi_snd_cwnd;
     }
     if (info->tcpi_snd_ssthresh < 0xFFFF) {
-        channel_info_st.ssthresh = info->tcpi_snd_ssthresh;
+        channel_info_st->ssthresh = info->tcpi_snd_ssthresh;
     }
-    if (channel_info_st.rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
-        channel_info_st.send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_st.rtt);
+    if (channel_info_st->rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
+        channel_info_st->send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_st->rtt);
     }
-    channel_info_st.rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
-    channel_info_st.rcv_space = info->tcpi_rcv_space;
-    channel_info_st.recv_q = s_r_queue_st.recv_q;
-    channel_info_st.send_q = s_r_queue_st.send_q;
-    return &channel_info_st;
+    channel_info_st->rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
+    channel_info_st->rcv_space = info->tcpi_rcv_space;
+    channel_info_st->recv_q = s_r_queue_st.recv_q;
+    channel_info_st->send_q = s_r_queue_st.send_q;
+    return channel_info_st;
 }
