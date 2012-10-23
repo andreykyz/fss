@@ -68,6 +68,7 @@ static const char *dg_proto = NULL;
 
 struct tcp_info* ret_tcp_info;
 struct channel_info* channel_info_st;
+struct s_r_queue s_r_queue_st;
 int lport_num;
 int rport_num;
 int error_tcp_info;
@@ -1444,6 +1445,10 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 		printf("%-*s ", state_width, sstate_name[s.state]);
 
 	printf("%-6d %-6d ", r->idiag_rqueue, r->idiag_wqueue);
+    if ((lport_num == s.lport) | (rport_num == s.rport)) {
+        s_r_queue_st.recv_q = r->idiag_rqueue;
+        s_r_queue_st.send_q = r->idiag_wqueue;
+    }
 
 	formatted_print(&s.local, s.lport);
 	formatted_print(&s.remote, s.rport);
@@ -1472,16 +1477,14 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 			printf("%08x", r->id.idiag_cookie[1]);
  		printf("%08x", r->id.idiag_cookie[0]);
 	}
-	if (show_mem || show_tcpinfo) {
+//	if (show_mem || show_tcpinfo) {
 		printf("\n\t");
 		if ((lport_num == s.lport) | (rport_num == s.rport)) {
 			ret_tcp_info = tcp_show_info(nlh, r);
-			s_r_queue_st.recv_q = r->idiag_rqueue;
-			s_r_queue_st.send_q = r->idiag_wqueue;
 		} else {
 			tcp_show_info(nlh, r);
 		}
-	}
+//	}
 
 	printf("\n");
 
