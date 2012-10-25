@@ -24,15 +24,10 @@ struct channel_info {
     uint32_t rcv_space;
     uint32_t send_q;
     uint32_t recv_q;
-};
-struct s_r_queue {
-    uint32_t send_q;
-    uint32_t recv_q;
+    int lport;
+    int rport;
 };
 
-struct channel_info* format_info(struct tcp_info * info);
-struct tcp_info* get_tcp_info(int lport, int rport);
-struct channel_info* get_format_tcp_info(int lport, int rport, struct channel_info* channel_info_st_link);
-void show_tcp_info_struct(struct tcp_info* info);
+void get_format_tcp_info(struct channel_info**, int channel_amount);
 
 #endif /* SS_H_ */

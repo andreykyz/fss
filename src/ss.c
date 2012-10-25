@@ -65,12 +65,10 @@ static const char *UDP_PROTO = "udp";
 static const char *RAW_PROTO = "raw";
 static const char *dg_proto = NULL;
 
-
-struct tcp_info* ret_tcp_info;
-struct channel_info* channel_info_st;
-struct s_r_queue s_r_queue_st;
-int lport_num;
-int rport_num;
+struct channel_info** channel_info_ss;
+struct port_pair** port_pair_ss;
+int conn_counter;
+int channel_amount_ss;
 int error_tcp_info;
 
 enum
@@ -1419,6 +1417,7 @@ static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_di
 	return 0;
 }
 
+/*main parse function*/
 static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 {
 	struct inet_diag_msg *r = NLMSG_DATA(nlh);
@@ -1445,10 +1444,6 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 		printf("%-*s ", state_width, sstate_name[s.state]);
 
 	printf("%-6d %-6d ", r->idiag_rqueue, r->idiag_wqueue);
-    if ((lport_num == s.lport) | (rport_num == s.rport)) {
-        s_r_queue_st.recv_q = r->idiag_rqueue;
-        s_r_queue_st.send_q = r->idiag_wqueue;
-    }
 
 	formatted_print(&s.local, s.lport);
 	formatted_print(&s.remote, s.rport);
@@ -1477,14 +1472,16 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 			printf("%08x", r->id.idiag_cookie[1]);
  		printf("%08x", r->id.idiag_cookie[0]);
 	}
-//	if (show_mem || show_tcpinfo) {
 		printf("\n\t");
-		if ((lport_num == s.lport) | (rport_num == s.rport)) {
-			ret_tcp_info = tcp_show_info(nlh, r);
-		} else {
-			tcp_show_info(nlh, r);
-		}
-//	}
+	// fill channel_info structure
+    if (((channel_info_ss[conn_counter]->lport == s.lport) | (channel_info_ss[conn_counter]->rport == s.rport)) & (conn_counter < channel_amount_ss)) {
+        format_info(tcp_show_info(nlh, r));
+        channel_info_ss[conn_counter]->recv_q = r->idiag_rqueue;
+        channel_info_ss[conn_counter]->send_q = r->idiag_wqueue;
+        conn_counter++;
+    } else {
+        tcp_show_info(nlh, r);
+    }
 
 	printf("\n");
 
@@ -2914,24 +2911,14 @@ int main1(int argc, char *argv[])
 		tcp_show(&current_filter, DCCPDIAG_GETSOCK);
 	return 0;
 }
-/**
- * Get struct tcp_info by port num
- */
-struct tcp_info* get_tcp_info(int lport, int rport) {
-	int argc = 2;
-	char *argv[] = { "ss", "-i" };
-	lport_num = lport;
-	rport_num = rport;
-	ret_tcp_info = 0;
-	s_r_queue_st.recv_q = 0;
-	s_r_queue_st.send_q = 0;
-	main1(argc, argv);
-	return ret_tcp_info;
-}
 
-struct channel_info* get_format_tcp_info(int lport, int rport, struct channel_info* channel_info_st_link) {
-    channel_info_st = channel_info_st_link;
-    return format_info(get_tcp_info(lport, rport));
+void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amount) {
+    channel_info_ss = channel_info_vt;
+    channel_amount_ss = channel_amount;
+    conn_counter = 0;
+    int argc = 2;
+    char *argv[] = { "ss", "-i" };
+    main1(argc, argv);
 }
 
 /**
@@ -2943,73 +2930,36 @@ int main_fake(int argc, char *argv[]) {
 
 }
 
-void show_tcp_info_struct(struct tcp_info* info) {
-    char b1[64];
-    printf("\n");
+/**
+ * Convert some information from tcp_info structure to human readable view
+ */
+int format_info(struct tcp_info* info) {
+    int lport = channel_info_ss[conn_counter]->lport;
+    int rport = channel_info_ss[conn_counter]->rport;
+    memset(channel_info_ss[conn_counter], 0, sizeof(channel_info_ss));
+    channel_info_ss[conn_counter]->lport = lport;
+    channel_info_ss[conn_counter]->rport = rport;
     if (info == 0) {
-        printf("data not found \n");
-        return;
+        return -1;
     }
-    if (show_options) {
-        if (info->tcpi_options & TCPI_OPT_TIMESTAMPS)
-            printf(" ts");
-        if (info->tcpi_options & TCPI_OPT_SACK)
-            printf(" sack");
-        if (info->tcpi_options & TCPI_OPT_ECN)
-            printf(" ecn");
-    }
-
-    if (info->tcpi_options & TCPI_OPT_WSCALE)
-        printf(" wscale:%d,%d", info->tcpi_snd_wscale, info->tcpi_rcv_wscale);
-    if (info->tcpi_rto && info->tcpi_rto != 3000000)
-        printf(" rto:%g", (double) info->tcpi_rto / 1000);
-    if (info->tcpi_rtt)
-        printf(" rtt:%g/%g", (double) info->tcpi_rtt / 1000, (double) info->tcpi_rttvar / 1000);
-    if (info->tcpi_ato)
-        printf(" ato:%g", (double) info->tcpi_ato / 1000);
-    if (info->tcpi_snd_cwnd != 2)
-        printf(" cwnd:%d", info->tcpi_snd_cwnd);
-    if (info->tcpi_snd_ssthresh < 0xFFFF)
-        printf(" ssthresh:%d", info->tcpi_snd_ssthresh);
-
-    double rtt = (double) info->tcpi_rtt;
-
-    if (rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
-        printf(" send %sbps", sprint_bw(b1, (double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 8000000. / rtt));
-    }
-
-    if (info->tcpi_rcv_rtt)
-        printf(" rcv_rtt:%g", (double) info->tcpi_rcv_rtt / 1000);
-    if (info->tcpi_rcv_space)
-        printf(" rcv_space:%d", info->tcpi_rcv_space);
-    printf("\n");
-}
-
-struct channel_info* format_info(struct tcp_info* info) {
-    memset(channel_info_st, 0, sizeof(channel_info_st));
-    if (info == 0) {
-        return channel_info_st;
-    }
-    channel_info_st->snd_wscale = info->tcpi_snd_wscale;
-    channel_info_st->rcv_wscale = info->tcpi_rcv_wscale;
+    channel_info_ss[conn_counter]->snd_wscale = info->tcpi_snd_wscale;
+    channel_info_ss[conn_counter]->rcv_wscale = info->tcpi_rcv_wscale;
     if (info->tcpi_rto && info->tcpi_rto != 3000000) {
-        channel_info_st->rto = (double) info->tcpi_rto / 1000;
+        channel_info_ss[conn_counter]->rto = (double) info->tcpi_rto / 1000;
     }
-    channel_info_st->rtt = (double) info->tcpi_rtt / 1000;
-    channel_info_st->rtt_var = (double) info->tcpi_rttvar / 1000;
-    channel_info_st->ato = (double) info->tcpi_ato / 1000;
+    channel_info_ss[conn_counter]->rtt = (double) info->tcpi_rtt / 1000;
+    channel_info_ss[conn_counter]->rtt_var = (double) info->tcpi_rttvar / 1000;
+    channel_info_ss[conn_counter]->ato = (double) info->tcpi_ato / 1000;
     if (info->tcpi_snd_cwnd != 2) { // really need?
-        channel_info_st->cwnd = info->tcpi_snd_cwnd;
+        channel_info_ss[conn_counter]->cwnd = info->tcpi_snd_cwnd;
     }
     if (info->tcpi_snd_ssthresh < 0xFFFF) {
-        channel_info_st->ssthresh = info->tcpi_snd_ssthresh;
+        channel_info_ss[conn_counter]->ssthresh = info->tcpi_snd_ssthresh;
     }
-    if (channel_info_st->rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
-        channel_info_st->send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_st->rtt);
+    if (channel_info_ss[conn_counter]->rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
+        channel_info_ss[conn_counter]->send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_ss[conn_counter]->rtt);
     }
-    channel_info_st->rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
-    channel_info_st->rcv_space = info->tcpi_rcv_space;
-    channel_info_st->recv_q = s_r_queue_st.recv_q;
-    channel_info_st->send_q = s_r_queue_st.send_q;
-    return channel_info_st;
+    channel_info_ss[conn_counter]->rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
+    channel_info_ss[conn_counter]->rcv_space = info->tcpi_rcv_space;
+    return 1;
 }
