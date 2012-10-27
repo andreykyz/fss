@@ -2922,15 +2922,6 @@ void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amou
 }
 
 /**
- * Fake main function
- */
-int main_fake(int argc, char *argv[]) {
-	show_tcp_info_struct(get_tcp_info(atoi(argv[1]), -1));
-	return 0;
-
-}
-
-/**
  * Convert some information from tcp_info structure to human readable view
  */
 int format_info(struct tcp_info* info) {
