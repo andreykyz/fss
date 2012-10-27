@@ -18,6 +18,7 @@ struct channel_info {
     double rtt_var; // in ms (jitter)
     double ato;
     uint32_t cwnd; // in mss
+    uint32_t mss;
     uint32_t ssthresh;
     uint32_t send; // in kbyte/sec)
     double rcv_rtt;

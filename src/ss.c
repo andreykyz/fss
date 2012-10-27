@@ -2959,6 +2959,7 @@ int format_info(struct tcp_info* info) {
     if (channel_info_ss[conn_counter]->rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
         channel_info_ss[conn_counter]->send = (uint32_t) ((double) info->tcpi_snd_cwnd * (double) info->tcpi_snd_mss * 1000. / channel_info_ss[conn_counter]->rtt);
     }
+    channel_info_ss[conn_counter]->mss = info->tcpi_snd_mss;
     channel_info_ss[conn_counter]->rcv_rtt = (double) info->tcpi_rcv_rtt / 1000;
     channel_info_ss[conn_counter]->rcv_space = info->tcpi_rcv_space;
     return 1;
