@@ -88,6 +88,7 @@ enum
 #define PACKET_DBM ((1<<PACKET_DG_DB)|(1<<PACKET_R_DB))
 #define UNIX_DBM ((1<<UNIX_DG_DB)|(1<<UNIX_ST_DB))
 #define ALL_DB ((1<<MAX_DB)-1)
+//#define printf(...) (void)0
 
 enum {
 	SS_UNKNOWN,
@@ -1478,6 +1479,7 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
         format_info(tcp_show_info(nlh, r));
         channel_info_ss[conn_counter]->recv_q = r->idiag_rqueue;
         channel_info_ss[conn_counter]->send_q = r->idiag_wqueue;
+        vtun_syslog(LOG_INFO, "conn_counter - %i send_q - %i recv_q - %i", conn_counter, channel_info_ss[conn_counter]->send_q, channel_info_ss[conn_counter]->recv_q);
         conn_counter++;
     } else {
         tcp_show_info(nlh, r);
@@ -2913,12 +2915,17 @@ int main1(int argc, char *argv[])
 }
 
 void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amount) {
+    vtun_syslog(LOG_INFO, "fss in get_format_tcp_info()");
     channel_info_ss = channel_info_vt;
     channel_amount_ss = channel_amount;
     conn_counter = 0;
     int argc = 2;
     char *argv[] = { "ss", "-i" };
     main1(argc, argv);
+    for (int i = 0; i < channel_amount; i++) {
+        vtun_syslog(LOG_INFO, "fss channel_info_vt send_q %u lport - %i rport - %i", channel_info_vt[i]->send_q, channel_info_vt[i]->lport, channel_info_vt[i]->rport);
+        vtun_syslog(LOG_INFO, "fss channel_info_ss send_q %u lport - %i rport - %i", channel_info_ss[i]->send_q, channel_info_ss[i]->lport, channel_info_ss[i]->rport);
+    }
 }
 
 /**

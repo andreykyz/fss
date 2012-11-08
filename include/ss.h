@@ -29,6 +29,8 @@ struct channel_info {
     int rport;
 };
 
+/* signal safe syslog function */
+void vtun_syslog (int priority, char *format, ...);
 void get_format_tcp_info(struct channel_info**, int channel_amount);
 
 #endif /* SS_H_ */
