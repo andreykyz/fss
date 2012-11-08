@@ -30,7 +30,7 @@ ADDLIB+=ipx_ntop.o ipx_pton.o
 
 CC = gcc
 HOSTCC = gcc
-CCOPTS = -D_GNU_SOURCE -O3 -Wstrict-prototypes -Wall
+CCOPTS = -std=gnu99 -D_GNU_SOURCE -O3 -Wstrict-prototypes -Wall
 CFLAGS = $(CCOPTS) -I../include -I/usr/include -I. $(DEFINES)
 YACC = bison -y $(YACCFLAGS)
 YACCFLAGS = -d -t -v --name-prefix=_fss
