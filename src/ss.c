@@ -42,7 +42,6 @@
 #include <linux/inet_diag.h>
 #include "ss.h"
 
-#define DEBUGG 1
 
 int resolve_hosts = 0;
 int resolve_services = 1;
