@@ -1480,14 +1480,24 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 		vtun_syslog(LOG_INFO, "fss all conns send_q - %i recv_q - %i lport - %i rport - %i", r->idiag_wqueue, r->idiag_rqueue, s.lport, s.rport);
 #endif
 		// fill channel_info structure
-    if (((channel_info_ss[conn_counter]->lport == s.lport) | (channel_info_ss[conn_counter]->rport == s.rport)) & (conn_counter < channel_amount_ss)) {
-        format_info(tcp_show_info(nlh, r));
-        channel_info_ss[conn_counter]->recv_q = r->idiag_rqueue;
-        channel_info_ss[conn_counter]->send_q = r->idiag_wqueue;
+
+    if (conn_counter < channel_amount_ss) {
+        for (int i = 0; i < channel_amount_ss; i++) {
+            if ((channel_info_ss[i]->lport == s.lport) | (channel_info_ss[i]->rport == s.rport)) {
+                format_info(tcp_show_info(nlh, r));
+                channel_info_ss[i]->recv_q = r->idiag_rqueue;
+                channel_info_ss[i]->send_q = r->idiag_wqueue;
 #ifdef DEBUGG
-        vtun_syslog(LOG_INFO, "fss conn_counter - %i channel_amount_ss - %i send_q - %i recv_q - %i lport - %i rport - %i", conn_counter, channel_amount_ss, channel_info_ss[conn_counter]->send_q, channel_info_ss[conn_counter]->recv_q, s.lport, s.rport);
+                vtun_syslog(LOG_INFO, "fss conn_counter - %i channel_amount_ss - %i send_q - %i recv_q - %i lport - %i rport - %i", i, channel_amount_ss,
+                        channel_info_ss[i]->send_q, channel_info_ss[i]->recv_q, s.lport, s.rport);
 #endif
-        conn_counter++;
+                conn_counter++;
+                break;
+            }
+            if (i == (channel_amount_ss - 1)) {
+                tcp_show_info(nlh, r);
+            }
+        }
     } else {
         tcp_show_info(nlh, r);
     }
