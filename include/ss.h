@@ -13,10 +13,10 @@
 struct channel_info {
     uint8_t snd_wscale;
     uint8_t rcv_wscale;
-    double rto;
+    double rto; // TCP retransmit timeout
     double rtt; // in ms (round trip time)
-    double rtt_var; // in ms (jitter)
-    double ato;
+    double rtt_var; // in ms (?jitter?)
+    double ato; // ACK timeout
     uint32_t cwnd; // in mss
     uint32_t mss;
     uint32_t ssthresh;
