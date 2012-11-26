@@ -89,7 +89,7 @@ enum
 #define PACKET_DBM ((1<<PACKET_DG_DB)|(1<<PACKET_R_DB))
 #define UNIX_DBM ((1<<UNIX_DG_DB)|(1<<UNIX_ST_DB))
 #define ALL_DB ((1<<MAX_DB)-1)
-//#define printf(...) (void)0
+#define printf(...) (void)0
 
 enum {
 	SS_UNKNOWN,
