@@ -1343,16 +1343,6 @@ static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_di
 	parse_rtattr(tb, INET_DIAG_MAX, (struct rtattr*)(r+1),
 		     nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*r)));
 
-	if (tb[INET_DIAG_MEMINFO]) {
-		const struct inet_diag_meminfo *minfo
-			= RTA_DATA(tb[INET_DIAG_MEMINFO]);
-		printf(" mem:(r%u,w%u,f%u,t%u)",
-		       minfo->idiag_rmem,
-		       minfo->idiag_wmem,
-		       minfo->idiag_fmem,
-		       minfo->idiag_tmem);
-	}
-
 	if (tb[INET_DIAG_INFO]) {
 		struct tcp_info *info;
 		int len = RTA_PAYLOAD(tb[INET_DIAG_INFO]);
@@ -1365,35 +1355,8 @@ static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_di
 		} else
 			info = RTA_DATA(tb[INET_DIAG_INFO]);
 
-		if (show_options) {
-			if (info->tcpi_options & TCPI_OPT_TIMESTAMPS)
-				printf(" ts");
-			if (info->tcpi_options & TCPI_OPT_SACK)
-				printf(" sack");
-			if (info->tcpi_options & TCPI_OPT_ECN)
-				printf(" ecn");
-		}
-
-		if (tb[INET_DIAG_CONG])
-			printf(" %s", (char *) RTA_DATA(tb[INET_DIAG_CONG]));
-
-		if (info->tcpi_options & TCPI_OPT_WSCALE)
-			printf(" wscale:%d,%d", info->tcpi_snd_wscale,
-			       info->tcpi_rcv_wscale);
-		if (info->tcpi_rto && info->tcpi_rto != 3000000)
-			printf(" rtotcp_show_info:%g", (double)info->tcpi_rto/1000);
-		if (info->tcpi_rtt)
-			printf(" rtt:%g/%g", (double)info->tcpi_rtt/1000,
-			       (double)info->tcpi_rttvar/1000);
-		if (info->tcpi_ato)
-			printf(" ato:%g", (double)info->tcpi_ato/1000);
-		if (info->tcpi_snd_cwnd != 2)
-			printf(" cwnd:%d", info->tcpi_snd_cwnd);
-		if (info->tcpi_snd_ssthresh < 0xFFFF)
-			printf(" ssthresh:%d", info->tcpi_snd_ssthresh);
-
 		rtt = (double) info->tcpi_rtt;
-		if (tb[INET_DIAG_VEGASINFO]) {
+/*		if (tb[INET_DIAG_VEGASINFO]) {
 			const struct tcpvegas_info *vinfo
 				= RTA_DATA(tb[INET_DIAG_VEGASINFO]);
 
@@ -1407,13 +1370,7 @@ static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_di
 			       sprint_bw(b1, (double) info->tcpi_snd_cwnd *
 					 (double) info->tcpi_snd_mss * 8000000.
 					 / rtt));
-		}
-
-		if (info->tcpi_rcv_rtt)
-			printf(" rcv_rtt:%g", (double) info->tcpi_rcv_rtt/1000);
-		if (info->tcpi_rcv_space)
-			printf(" rcv_space:%d", info->tcpi_rcv_space);
-
+		}*/
 		return info;
 	}
 	return 0;
@@ -1440,46 +1397,10 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 	if (f && f->f && run_ssfilter(f->f, &s) == 0)
 		return 0;
 
-	if (netid_width)
-		printf("%-*s ", netid_width, "tcp");
-	if (state_width)
-		printf("%-*s ", state_width, sstate_name[s.state]);
-
-	printf("%-6d %-6d ", r->idiag_rqueue, r->idiag_wqueue);
-
-	formatted_print(&s.local, s.lport);
-	formatted_print(&s.remote, s.rport);
-
-	if (show_options) {
-		if (r->idiag_timer) {
-			if (r->idiag_timer > 4)
-				r->idiag_timer = 5;
-			printf(" timer:(%s,%s,%d)",
-			       tmr_name[r->idiag_timer],
-			       print_ms_timer(r->idiag_expires),
-			       r->idiag_retrans);
-		}
-	}
-	if (show_users) {
-		char ubuf[4096];
-		if (find_users(r->idiag_inode, ubuf, sizeof(ubuf)) > 0)
-			printf(" users:(%s)", ubuf);
-	}
-	if (show_details) {
-		if (r->idiag_uid)
-			printf(" uid:%u", (unsigned)r->idiag_uid);
-		printf(" ino:%u", r->idiag_inode);
-		printf(" sk:");
-		if (r->id.idiag_cookie[1] != 0)
-			printf("%08x", r->id.idiag_cookie[1]);
- 		printf("%08x", r->id.idiag_cookie[0]);
-	}
-		printf("\n\t");
 #ifdef DEBUGG
 		vtun_syslog(LOG_INFO, "fss all conns send_q - %i recv_q - %i lport - %i rport - %i", r->idiag_wqueue, r->idiag_rqueue, s.lport, s.rport);
 #endif
 		// fill channel_info structure
-
     if (conn_counter < channel_amount_ss) {
         for (int i = 0; i < channel_amount_ss; i++) {
             if ((channel_info_ss[i]->lport == s.lport) | (channel_info_ss[i]->rport == s.rport)) {
@@ -1500,8 +1421,6 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
     } else {
         tcp_show_info(nlh, r);
     }
-
-	printf("\n");
 
 	return 0;
 }
