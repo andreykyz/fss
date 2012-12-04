@@ -2451,197 +2451,18 @@ int main1(int argc, char *argv[])
 	int saw_states = 0;
 	int saw_query = 0;
 	int do_summary = 0;
+	show_tcpinfo = 1;
 	const char *dump_tcpdiag = NULL;
 	FILE *filter_fp = NULL;
 	int ch;
 
 	memset(&current_filter, 0, sizeof(current_filter));
 
-  current_filter.states = default_filter.states;
-    goto evil_hack;
-	while ((ch = getopt_long(argc, argv, "gdhaletuwxnro460spf:miA:D:F:vV",
-				 long_opts, NULL)) != EOF) {
-		switch(ch) {
-		case 'g':
-			show_tcpinfo = 1;
-			show_mem = 1;
-			show_options = 1;
-			show_details++;
-			resolve_services = 0;
-			continuous = 1;
-			break;
-		case 'n':
-			resolve_services = 0;
-			break;
-		case 'r':
-			resolve_hosts = 1;
-			break;
-		case 'o':
-			show_options = 1;
-			break;
-		case 'e':
-			show_options = 1;
-			show_details++;
-			break;
-		case 'm':
-			show_mem = 1;
-			break;
-		case 'i':
-			show_tcpinfo = 1;
-			break;
-		case 'p':
-			show_users++;
-			user_ent_hash_build();
-			break;
-		case 'd':
-			current_filter.dbs |= (1<<DCCP_DB);
-			do_default = 0;
-			break;
-		case 't':
-			current_filter.dbs |= (1<<TCP_DB);
-			do_default = 0;
-			break;
-		case 'u':
-			current_filter.dbs |= (1<<UDP_DB);
-			do_default = 0;
-			break;
-		case 'w':
-			current_filter.dbs |= (1<<RAW_DB);
-			do_default = 0;
-			break;
-		case 'x':
-			current_filter.dbs |= UNIX_DBM;
-			do_default = 0;
-			break;
-		case 'a':
-			current_filter.states = SS_ALL;
-			break;
-		case 'l':
-			current_filter.states = (1<<SS_LISTEN);
-			break;
-		case '4':
-			preferred_family = AF_INET;
-			break;
-		case '6':
-			preferred_family = AF_INET6;
-			break;
-		case '0':
-			preferred_family = AF_PACKET;
-			break;
-		case 'f':
-			if (strcmp(optarg, "inet") == 0)
-				preferred_family = AF_INET;
-			else if (strcmp(optarg, "inet6") == 0)
-				preferred_family = AF_INET6;
-			else if (strcmp(optarg, "link") == 0)
-				preferred_family = AF_PACKET;
-			else if (strcmp(optarg, "unix") == 0)
-				preferred_family = AF_UNIX;
-			else if (strcmp(optarg, "netlink") == 0)
-				preferred_family = AF_NETLINK;
-			else if (strcmp(optarg, "help") == 0)
-				help();
-			else {
-				fprintf(stderr, "ss: \"%s\" is invalid family\n", optarg);
-				usage();
-			}
-			break;
-		case 'A':
-		{
-			char *p, *p1;
-			if (!saw_query) {
-				current_filter.dbs = 0;
-				saw_query = 1;
-				do_default = 0;
-			}
-			p = p1 = optarg;
-			do {
-				if ((p1 = strchr(p, ',')) != NULL)
-					*p1 = 0;
-				if (strcmp(p, "all") == 0) {
-					current_filter.dbs = ALL_DB;
-				} else if (strcmp(p, "inet") == 0) {
-					current_filter.dbs |= (1<<TCP_DB)|(1<<DCCP_DB)|(1<<UDP_DB)|(1<<RAW_DB);
-				} else if (strcmp(p, "udp") == 0) {
-					current_filter.dbs |= (1<<UDP_DB);
-				} else if (strcmp(p, "dccp") == 0) {
-					current_filter.dbs |= (1<<DCCP_DB);
-				} else if (strcmp(p, "tcp") == 0) {
-					current_filter.dbs |= (1<<TCP_DB);
-				} else if (strcmp(p, "raw") == 0) {
-					current_filter.dbs |= (1<<RAW_DB);
-				} else if (strcmp(p, "unix") == 0) {
-					current_filter.dbs |= UNIX_DBM;
-				} else if (strcasecmp(p, "unix_stream") == 0 ||
-					   strcmp(p, "u_str") == 0) {
-					current_filter.dbs |= (1<<UNIX_ST_DB);
-				} else if (strcasecmp(p, "unix_dgram") == 0 ||
-					   strcmp(p, "u_dgr") == 0) {
-					current_filter.dbs |= (1<<UNIX_DG_DB);
-				} else if (strcmp(p, "packet") == 0) {
-					current_filter.dbs |= PACKET_DBM;
-				} else if (strcmp(p, "packet_raw") == 0 ||
-					   strcmp(p, "p_raw") == 0) {
-					current_filter.dbs |= (1<<PACKET_R_DB);
-				} else if (strcmp(p, "packet_dgram") == 0 ||
-					   strcmp(p, "p_dgr") == 0) {
-					current_filter.dbs |= (1<<PACKET_DG_DB);
-				} else if (strcmp(p, "netlink") == 0) {
-					current_filter.dbs |= (1<<NETLINK_DB);
-				} else {
-					fprintf(stderr, "ss: \"%s\" is illegal socket table id\n", p);
-					usage();
-				}
-				p = p1 + 1;
-			} while (p1);
-			break;
-		}
-		case 's':
-			do_summary = 1;
-			break;
-		case 'D':
-			dump_tcpdiag = optarg;
-			break;
-		case 'F':
-			if (filter_fp) {
-				fprintf(stderr, "More than one filter file\n");
-				exit(-1);
-			}
-			if (optarg[0] == '-')
-				filter_fp = stdin;
-			else
-				filter_fp = fopen(optarg, "r");
-			if (!filter_fp) {
-				perror("fopen filter file");
-				exit(-1);
-			}
-			break;
-		case 'v':
-		case 'V':
-			printf("ss utility, iproute2-ss%s\n", SNAPSHOT);
-			exit(0);
-		case 'h':
-		case '?':
-			help();
-		default:
-			usage();
-		}
-	}
-    evil_hack: show_tcpinfo = 1;
+    current_filter.states = default_filter.states;
+    current_filter.dbs = default_filter.dbs;
 
 	argc -= optind;
 	argv += optind;
-
-	get_slabstat(&slabstat);
-
-	if (do_summary) {
-		print_summary();
-		if (do_default && argc == 0)
-			exit(0);
-	}
-
-	if (do_default)
-		current_filter.dbs = default_filter.dbs;
 
 	if (preferred_family == AF_UNSPEC) {
 		if (!(current_filter.dbs&~UNIX_DBM))
@@ -2806,7 +2627,7 @@ int main1(int argc, char *argv[])
 		udp_show(&current_filter);
 	if (current_filter.dbs & (1<<TCP_DB))
 		do {
-			tcp_show(&current_filter, TCPDIAG_GETSOCK);
+		    tcp_show_netlink(&current_filter, NULL, TCPDIAG_GETSOCK);
 		} while (continuous == 1);
 	if (current_filter.dbs & (1<<DCCP_DB))
 		tcp_show(&current_filter, DCCPDIAG_GETSOCK);
