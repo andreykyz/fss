@@ -1352,25 +1352,9 @@ static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_di
 			info = alloca(sizeof(*info));
 			memset(info, 0, sizeof(*info));
 			memcpy(info, RTA_DATA(tb[INET_DIAG_INFO]), len);
-		} else
-			info = RTA_DATA(tb[INET_DIAG_INFO]);
-
-		rtt = (double) info->tcpi_rtt;
-/*		if (tb[INET_DIAG_VEGASINFO]) {
-			const struct tcpvegas_info *vinfo
-				= RTA_DATA(tb[INET_DIAG_VEGASINFO]);
-
-			if (vinfo->tcpv_enabled &&
-			    vinfo->tcpv_rtt && vinfo->tcpv_rtt != 0x7fffffff)
-				rtt =  vinfo->tcpv_rtt;
-		}
-
-		if (rtt > 0 && info->tcpi_snd_mss && info->tcpi_snd_cwnd) {
-			printf(" send %sbps",
-			       sprint_bw(b1, (double) info->tcpi_snd_cwnd *
-					 (double) info->tcpi_snd_mss * 8000000.
-					 / rtt));
-		}*/
+        } else {
+            info = RTA_DATA(tb[INET_DIAG_INFO]);
+        }
 		return info;
 	}
 	return 0;
@@ -1382,28 +1366,13 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 	struct inet_diag_msg *r = NLMSG_DATA(nlh);
 	struct tcpstat s;
 
-	s.state = r->idiag_state;
-	s.local.family = s.remote.family = r->idiag_family;
-	s.lport = ntohs(r->id.idiag_sport);
-	s.rport = ntohs(r->id.idiag_dport);
-	if (s.local.family == AF_INET) {
-		s.local.bytelen = s.remote.bytelen = 4;
-	} else {
-		s.local.bytelen = s.remote.bytelen = 16;
-	}
-	memcpy(s.local.data, r->id.idiag_src, s.local.bytelen);
-	memcpy(s.remote.data, r->id.idiag_dst, s.local.bytelen);
-
-	if (f && f->f && run_ssfilter(f->f, &s) == 0)
-		return 0;
-
 #ifdef DEBUGG
 		vtun_syslog(LOG_INFO, "fss all conns send_q - %i recv_q - %i lport - %i rport - %i", r->idiag_wqueue, r->idiag_rqueue, s.lport, s.rport);
 #endif
 		// fill channel_info structure
     if (conn_counter < channel_amount_ss) {
         for (int i = 0; i < channel_amount_ss; i++) {
-            if ((channel_info_ss[i]->lport == s.lport) | (channel_info_ss[i]->rport == s.rport)) {
+            if ((channel_info_ss[i]->lport == ntohs(r->id.idiag_sport)) | (channel_info_ss[i]->rport == ntohs(r->id.idiag_dport))) {
                 format_info(tcp_show_info(nlh, r));
                 channel_info_ss[i]->recv_q = r->idiag_rqueue;
                 channel_info_ss[i]->send_q = r->idiag_wqueue;
@@ -1414,12 +1383,7 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
                 conn_counter++;
                 break;
             }
-            if (i == (channel_amount_ss - 1)) {
-                tcp_show_info(nlh, r);
-            }
         }
-    } else {
-        tcp_show_info(nlh, r);
     }
 
 	return 0;
