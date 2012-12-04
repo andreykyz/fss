@@ -2460,108 +2460,10 @@ int main1(int argc, char *argv[])
 
     current_filter.states = default_filter.states;
     current_filter.dbs = default_filter.dbs;
+    current_filter.families = default_filter.families;
 
 	argc -= optind;
 	argv += optind;
-
-	if (preferred_family == AF_UNSPEC) {
-		if (!(current_filter.dbs&~UNIX_DBM))
-			preferred_family = AF_UNIX;
-		else if (!(current_filter.dbs&~PACKET_DBM))
-			preferred_family = AF_PACKET;
-		else if (!(current_filter.dbs&~(1<<NETLINK_DB)))
-			preferred_family = AF_NETLINK;
-	}
-
-	if (preferred_family != AF_UNSPEC) {
-		int mask2;
-		if (preferred_family == AF_INET ||
-		    preferred_family == AF_INET6) {
-			mask2= current_filter.dbs;
-		} else if (preferred_family == AF_PACKET) {
-			mask2 = PACKET_DBM;
-		} else if (preferred_family == AF_UNIX) {
-			mask2 = UNIX_DBM;
-		} else if (preferred_family == AF_NETLINK) {
-			mask2 = (1<<NETLINK_DB);
-		} else {
-			mask2 = 0;
-		}
-
-		if (do_default)
-			current_filter.dbs = mask2;
-		else
-			current_filter.dbs &= mask2;
-		current_filter.families = (1<<preferred_family);
-	} else {
-		if (!do_default)
-			current_filter.families = ~0;
-		else
-			current_filter.families = default_filter.families;
-	}
-	if (current_filter.dbs == 0) {
-		fprintf(stderr, "ss: no socket tables to show with such filter.\n");
-		exit(0);
-	}
-	if (current_filter.families == 0) {
-		fprintf(stderr, "ss: no families to show with such filter.\n");
-		exit(0);
-	}
-// disable by -n
-	if (resolve_services && resolve_hosts &&
-	    (current_filter.dbs&(UNIX_DBM|(1<<TCP_DB)|(1<<UDP_DB)|(1<<DCCP_DB))))
-		init_service_resolver();
-
-	/* Now parse filter... */
-	if (argc == 0 && filter_fp) {
-		if (ssfilter_parse(&current_filter.f, 0, NULL, filter_fp))
-			usage();
-	}
-
-	while (argc > 0) {
-		if (strcmp(*argv, "state") == 0) {
-			NEXT_ARG();
-			if (!saw_states)
-				current_filter.states = 0;
-			current_filter.states |= scan_state(*argv);
-			saw_states = 1;
-		} else if (strcmp(*argv, "exclude") == 0 ||
-			   strcmp(*argv, "excl") == 0) {
-			NEXT_ARG();
-			if (!saw_states)
-				current_filter.states = SS_ALL;
-			current_filter.states &= ~scan_state(*argv);
-			saw_states = 1;
-		} else {
-			if (ssfilter_parse(&current_filter.f, argc, argv, filter_fp))
-				usage();
-			break;
-		}
-		argc--; argv++;
-	}
-
-	if (current_filter.states == 0) {
-		fprintf(stderr, "ss: no socket states to show with such filter.\n");
-		exit(0);
-	}
-
-	if (dump_tcpdiag) {
-		FILE *dump_fp = stdout;
-		if (!(current_filter.dbs & (1<<TCP_DB))) {
-			fprintf(stderr, "ss: tcpdiag dump requested and no tcp in filter.\n");
-			exit(0);
-		}
-		if (dump_tcpdiag[0] != '-') {
-			dump_fp = fopen(dump_tcpdiag, "w");
-			if (!dump_tcpdiag) {
-				perror("fopen dump file");
-				exit(-1);
-			}
-		}
-		tcp_show_netlink(&current_filter, dump_fp, TCPDIAG_GETSOCK);
-		fflush(dump_fp);
-		exit(0);
-	}
 
 	netid_width = 0;
 	if (current_filter.dbs&(current_filter.dbs-1))
@@ -2602,16 +2504,6 @@ int main1(int argc, char *argv[])
 		addrp_width = 15+serv_width+1;
 
 	addr_width = addrp_width - serv_width - 1;
-
-	if (netid_width)
-		printf("%-*s ", netid_width, "Netid");
-	if (state_width)
-		printf("%-*s ", state_width, "State");
-	printf("%-6s %-6s ", "Recv-Q", "Send-Q");
-
-	printf("%*s:%-*s %*s:%-*s\n",
-	       addr_width, "Local Address", serv_width, "Port",
-	       addr_width, "Peer Address", serv_width, "Port");
 
 	fflush(stdout);
 
