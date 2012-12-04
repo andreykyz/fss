@@ -1322,23 +1322,9 @@ outerr:
 	return ferror(fp) ? -1 : 0;
 }
 
-static char *sprint_bw(char *buf, double bw)
-{
-	if (bw > 1000000.)
-		sprintf(buf,"%.1fM", bw / 1000000.);
-	else if (bw > 1000.)
-		sprintf(buf,"%.1fK", bw / 1000.);
-	else
-		sprintf(buf, "%g", bw);
-
-	return buf;
-}
-
 static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
 {
 	struct rtattr * tb[INET_DIAG_MAX+1];
-	char b1[64];
-	double rtt = 0;
 
 	parse_rtattr(tb, INET_DIAG_MAX, (struct rtattr*)(r+1),
 		     nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*r)));
