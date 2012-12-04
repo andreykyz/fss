@@ -1158,6 +1158,15 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 	return 0;
 }
 
+/**
+ * Function for connect to kernel's netlink interface
+ * and get info about tcp connections
+ *
+ * @param f - flags for getting tcp information
+ * @param dump_fp - now unused
+ * @param socktype
+ * @return
+ */
 static int tcp_show_netlink(struct filter *f, FILE *dump_fp, int socktype)
 {
 	int fd;
@@ -2080,11 +2089,18 @@ static const struct option long_opts[] = {
 
 };
 
-int main1(int argc, char *argv[])
-{
-	show_tcpinfo = 1;
+/**
+ * Function get from **channel_info_vt port's num and fill information about tcp connection
+ * @param channel_info_vt
+ * @param channel_amount - *channel_info_vt[] array length
+ */
+void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amount) {
+    channel_info_ss = channel_info_vt;
+    channel_amount_ss = channel_amount;
+    conn_counter = 0;
+    show_tcpinfo = 1;
 
-	memset(&current_filter, 0, sizeof(current_filter));
+    memset(&current_filter, 0, sizeof(current_filter));
 
     current_filter.states = default_filter.states;
     current_filter.dbs = default_filter.dbs;
@@ -2092,16 +2108,6 @@ int main1(int argc, char *argv[])
 
     tcp_show_netlink(&current_filter, NULL, TCPDIAG_GETSOCK);
 
-	return 0;
-}
-
-void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amount) {
-    channel_info_ss = channel_info_vt;
-    channel_amount_ss = channel_amount;
-    conn_counter = 0;
-    int argc = 2;
-    char *argv[] = { "ss", "-i" };
-    main1(argc, argv);
 #ifdef DEBUGG
     for (int i = 0; i < channel_amount; i++) {
         vtun_syslog(LOG_INFO, "fss channel_info_vt send_q %u lport - %i rport - %i", channel_info_vt[i]->send_q, channel_info_vt[i]->lport, channel_info_vt[i]->rport);
