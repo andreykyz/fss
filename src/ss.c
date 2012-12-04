@@ -2462,67 +2462,8 @@ int main1(int argc, char *argv[])
     current_filter.dbs = default_filter.dbs;
     current_filter.families = default_filter.families;
 
-	argc -= optind;
-	argv += optind;
+    tcp_show_netlink(&current_filter, NULL, TCPDIAG_GETSOCK);
 
-	netid_width = 0;
-	if (current_filter.dbs&(current_filter.dbs-1))
-		netid_width = 5;
-
-	state_width = 0;
-	if (current_filter.states&(current_filter.states-1))
-		state_width = 10;
-
-	screen_width = 80;
-	if (isatty(STDOUT_FILENO)) {
-		struct winsize w;
-
-		if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) != -1) {
-			if (w.ws_col > 0)
-				screen_width = w.ws_col;
-		}
-	}
-
-	addrp_width = screen_width;
-	addrp_width -= netid_width+1;
-	addrp_width -= state_width+1;
-	addrp_width -= 14;
-
-	if (addrp_width&1) {
-		if (netid_width)
-			netid_width++;
-		else if (state_width)
-			state_width++;
-	}
-
-	addrp_width /= 2;
-	addrp_width--;
-
-	serv_width = resolve_services ? 7 : 5;
-
-	if (addrp_width < 15+serv_width+1)
-		addrp_width = 15+serv_width+1;
-
-	addr_width = addrp_width - serv_width - 1;
-
-	fflush(stdout);
-
-	if (current_filter.dbs & (1<<NETLINK_DB))
-		netlink_show(&current_filter);
-	if (current_filter.dbs & PACKET_DBM)
-		packet_show(&current_filter);
-	if (current_filter.dbs & UNIX_DBM)
-		unix_show(&current_filter);
-	if (current_filter.dbs & (1<<RAW_DB))
-		raw_show(&current_filter);
-	if (current_filter.dbs & (1<<UDP_DB))
-		udp_show(&current_filter);
-	if (current_filter.dbs & (1<<TCP_DB))
-		do {
-		    tcp_show_netlink(&current_filter, NULL, TCPDIAG_GETSOCK);
-		} while (continuous == 1);
-	if (current_filter.dbs & (1<<DCCP_DB))
-		tcp_show(&current_filter, DCCPDIAG_GETSOCK);
 	return 0;
 }
 
