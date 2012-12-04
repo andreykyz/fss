@@ -1606,84 +1606,6 @@ static int tcp_show_netlink_file(struct filter *f)
 	}
 }
 
-static int tcp_show(struct filter *f, int socktype)
-{
-	FILE *fp = NULL;
-	char *buf = NULL;
-	int bufsize = 64*1024;
-
-	dg_proto = TCP_PROTO;
-
-	if (getenv("TCPDIAG_FILE"))
-		return tcp_show_netlink_file(f);
-
-	if (!getenv("PROC_NET_TCP") && !getenv("PROC_ROOT")
-	    && tcp_show_netlink(f, NULL, socktype) == 0)
-		return 0;
-
-	/* Sigh... We have to parse /proc/net/tcp... */
-
-
-	/* Estimate amount of sockets and try to allocate
-	 * huge buffer to read all the table at one read.
-	 * Limit it by 16MB though. The assumption is: as soon as
-	 * kernel was able to hold information about N connections,
-	 * it is able to give us some memory for snapshot.
-	 */
-	if (1) {
-		int guess = slabstat.socks+slabstat.tcp_syns;
-		if (f->states&(1<<SS_TIME_WAIT))
-			guess += slabstat.tcp_tws;
-		if (guess > (16*1024*1024)/128)
-			guess = (16*1024*1024)/128;
-		guess *= 128;
-		if (guess > bufsize)
-			bufsize = guess;
-	}
-	while (bufsize >= 64*1024) {
-		if ((buf = malloc(bufsize)) != NULL)
-			break;
-		bufsize /= 2;
-	}
-	if (buf == NULL) {
-		errno = ENOMEM;
-		return -1;
-	}
-
-	if (f->families & (1<<AF_INET)) {
-		if ((fp = net_tcp_open()) == NULL)
-			goto outerr;
-
-		setbuffer(fp, buf, bufsize);
-		if (generic_record_read(fp, tcp_show_line, f, AF_INET))
-			goto outerr;
-		fclose(fp);
-	}
-
-	if ((f->families & (1<<AF_INET6)) &&
-	    (fp = net_tcp6_open()) != NULL) {
-		setbuffer(fp, buf, bufsize);
-		if (generic_record_read(fp, tcp_show_line, f, AF_INET6))
-			goto outerr;
-		fclose(fp);
-	}
-
-	free(buf);
-	return 0;
-
-outerr:
-	do {
-		int saved_errno = errno;
-		if (buf)
-			free(buf);
-		if (fp)
-			fclose(fp);
-		errno = saved_errno;
-		return -1;
-	} while (0);
-}
-
-
 int dgram_show_line(char *line, const struct filter *f, int family)
 {
 	struct tcpstat s;
@@ -2447,14 +2369,7 @@ static const struct option long_opts[] = {
 
 int main1(int argc, char *argv[])
 {
-	int do_default = 1;
-	int saw_states = 0;
-	int saw_query = 0;
-	int do_summary = 0;
 	show_tcpinfo = 1;
-	const char *dump_tcpdiag = NULL;
-	FILE *filter_fp = NULL;
-	int ch;
 
 	memset(&current_filter, 0, sizeof(current_filter));
 
