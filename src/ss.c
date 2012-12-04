@@ -1130,35 +1130,10 @@ outerr:
 	return ferror(fp) ? -1 : 0;
 }
 
-static struct tcp_info* tcp_show_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r)
-{
-	struct rtattr * tb[INET_DIAG_MAX+1];
-
-	parse_rtattr(tb, INET_DIAG_MAX, (struct rtattr*)(r+1),
-		     nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*r)));
-
-	if (tb[INET_DIAG_INFO]) {
-		struct tcp_info *info;
-		int len = RTA_PAYLOAD(tb[INET_DIAG_INFO]);
-
-		/* workaround for older kernels with less fields */
-		if (len < sizeof(*info)) {
-			info = alloca(sizeof(*info));
-			memset(info, 0, sizeof(*info));
-			memcpy(info, RTA_DATA(tb[INET_DIAG_INFO]), len);
-        } else {
-            info = RTA_DATA(tb[INET_DIAG_INFO]);
-        }
-		return info;
-	}
-	return 0;
-}
-
 /*main parse function*/
 static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
 {
 	struct inet_diag_msg *r = NLMSG_DATA(nlh);
-	struct tcpstat s;
 
 #ifdef DEBUGG
 		vtun_syslog(LOG_INFO, "fss all conns send_q - %i recv_q - %i lport - %i rport - %i", r->idiag_wqueue, r->idiag_rqueue, s.lport, s.rport);
@@ -1167,7 +1142,7 @@ static int tcp_show_sock(struct nlmsghdr *nlh, struct filter *f)
     if (conn_counter < channel_amount_ss) {
         for (int i = 0; i < channel_amount_ss; i++) {
             if ((channel_info_ss[i]->lport == ntohs(r->id.idiag_sport)) | (channel_info_ss[i]->rport == ntohs(r->id.idiag_dport))) {
-                format_info(tcp_show_info(nlh, r));
+                format_info(nlh, r);
                 channel_info_ss[i]->recv_q = r->idiag_rqueue;
                 channel_info_ss[i]->send_q = r->idiag_wqueue;
 #ifdef DEBUGG
@@ -2137,17 +2112,38 @@ void get_format_tcp_info(struct channel_info** channel_info_vt, int channel_amou
 }
 
 /**
- * Convert some information from tcp_info structure to human readable view
+ * Parse netlink message to channel_info structure
+ *
+ * @param nlh
+ * @param r
+ * @return 0 - error and 1 as success
  */
-int format_info(struct tcp_info* info) {
-    int lport = channel_info_ss[conn_counter]->lport;
-    int rport = channel_info_ss[conn_counter]->rport;
-    memset(channel_info_ss[conn_counter], 0, sizeof(channel_info_ss));
-    channel_info_ss[conn_counter]->lport = lport;
-    channel_info_ss[conn_counter]->rport = rport;
-    if (info == 0) {
-        return -1;
+int format_info(const struct nlmsghdr *nlh, struct inet_diag_msg *r) {
+
+    struct rtattr * tb[INET_DIAG_MAX + 1];
+    struct tcp_info *info;
+
+    parse_rtattr(tb, INET_DIAG_MAX, (struct rtattr*) (r + 1), nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*r)));
+
+    if (tb[INET_DIAG_INFO]) {
+        int len = RTA_PAYLOAD(tb[INET_DIAG_INFO]);
+
+        /* workaround for older kernels with less fields ???legacy??? */
+        if (len < sizeof(*info)) {
+            info = alloca(sizeof(*info));
+            memset(info, 0, sizeof(*info));
+            memcpy(info, RTA_DATA(tb[INET_DIAG_INFO]), len);
+        } else {
+            info = RTA_DATA(tb[INET_DIAG_INFO]);
+        }
+    } else {
+        return 0;
     }
+    if (info == 0) {
+        return 0;
+    }
+
+    memset(channel_info_ss[conn_counter], 0, sizeof(channel_info_ss));
     channel_info_ss[conn_counter]->snd_wscale = info->tcpi_snd_wscale;
     channel_info_ss[conn_counter]->rcv_wscale = info->tcpi_rcv_wscale;
     if (info->tcpi_rto && info->tcpi_rto != 3000000) {
